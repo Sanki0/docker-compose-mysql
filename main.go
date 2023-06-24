@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -11,55 +10,15 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func connectionDB() *sql.DB {
-	db, err := sql.Open("mysql", "test_user:secret@tcp(db:3306)/test_database")
-	if err != nil {
-		panic(err.Error())
-	}
-	return db
-}
-func chkError(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
-func PingDb(db *sql.DB) {
-	err := db.Ping()
-	chkError(err)
-}
-
 func homePage(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Welcome to the HomePage!")
 }
 
-func getTipoClientes() ([]TipoCliente, error) {
+///////////////////////// TIPO CLIENTES /////////////////////////
 
-	db := connectionDB()
-	defer db.Close()
-	PingDb(db)
+func getTipoClientes(w http.ResponseWriter, r *http.Request) {
 
-	statement := "SELECT * FROM tipoCliente"
-	rows, err := db.Query(statement)
-	chkError(err)
-	defer rows.Close()
-
-	tipoClientes := []TipoCliente{}
-
-	for rows.Next() {
-		var t TipoCliente
-		if err := rows.Scan(&t.IdTipoCliente, &t.Nombre, &t.Detalle); err != nil {
-			return nil, err
-		}
-		tipoClientes = append(tipoClientes, t)
-	}
-
-	return tipoClientes, nil
-}
-
-func getTipoClientesController(w http.ResponseWriter, r *http.Request) {
-
-	tipoClientes, err := getTipoClientes()
+	tipoClientes, err := getTipoClientesController()
 	if err != nil {
 		fmt.Fprintf(w, "No tipo clientes found")
 	}
@@ -69,32 +28,67 @@ func getTipoClientesController(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func getClientes() ([]Cliente, error) {
+func updateTipoCliente(w http.ResponseWriter, r *http.Request) {
 
-	db := connectionDB()
-	defer db.Close()
-	PingDb(db)
+	var obj TipoCliente
 
-	statement := "SELECT * FROM cliente"
-	rows, err := db.Query(statement)
-	chkError(err)
-
-	clientes := []Cliente{}
-
-	for rows.Next() {
-		var c Cliente
-		if err := rows.Scan(&c.IdCliente, &c.Nombre, &c.Dni, &c.Telefono, &c.Correo, &c.Estado, &c.IdTipoCliente); err != nil {
-			return nil, err
-		}
-		clientes = append(clientes, c)
+	err := json.NewDecoder(r.Body).Decode(&obj)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
-	return clientes, nil
+	err = updateTipoClienteController(obj)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 }
 
-func getClientesController(w http.ResponseWriter, r *http.Request) {
+func createTipoCliente(w http.ResponseWriter, r *http.Request) {
 
-	clientes, err := getClientes()
+	var obj TipoCliente
+
+	fmt.Println("r.Body", r.Body)
+
+	err := json.NewDecoder(r.Body).Decode(&obj)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = createTipoClienteController(obj)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+}
+
+func deleteTipoCliente(w http.ResponseWriter, r *http.Request) {
+
+	var obj TipoCliente
+
+	err := json.NewDecoder(r.Body).Decode(&obj)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = deleteTipoClienteController(obj)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+}
+
+///////////////////////// CLIENTES /////////////////////////
+
+func getClientes(w http.ResponseWriter, r *http.Request) {
+
+	clientes, err := getClientesController()
 	if err != nil {
 		fmt.Fprintf(w, "No clientes found")
 	}
@@ -103,15 +97,85 @@ func getClientesController(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func createCliente(w http.ResponseWriter, r *http.Request) {
+
+	var obj Cliente
+
+	fmt.Println("r.Body", r.Body)
+
+	err := json.NewDecoder(r.Body).Decode(&obj)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = createClienteController(obj)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+}
+
+func updateCliente(w http.ResponseWriter, r *http.Request) {
+
+	var obj Cliente
+
+	err := json.NewDecoder(r.Body).Decode(&obj)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = updateClienteController(obj)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+}
+
+func deleteCliente(w http.ResponseWriter, r *http.Request) {
+
+	var obj Cliente
+
+	err := json.NewDecoder(r.Body).Decode(&obj)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = deleteClienteController(obj)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+}
+
 func main() {
 
 	r := mux.NewRouter()
 
+	// TIPO CLIENTES
 	// get tipo clientes
-	r.HandleFunc("/tipoClientes", getTipoClientesController).Methods("GET")
+	r.HandleFunc("/tipoClientes", getTipoClientes).Methods("GET")
+	// create tipo cliente
+	r.HandleFunc("/tipoCliente", createTipoCliente).Methods("POST")
+	// update tipo cliente
+	r.HandleFunc("/tipoCliente", updateTipoCliente).Methods("PUT")
+	// delete tipo cliente
+	r.HandleFunc("/tipoCliente", deleteTipoCliente).Methods("DELETE")
 
+	// CLIENTES
 	// get clientes
-	r.HandleFunc("/clientes", getClientesController).Methods("GET")
+	r.HandleFunc("/clientes", getClientes).Methods("GET")
+	// create cliente {"nombre":"clienteeeeeeeeeeeeeeeeeeeeeeee","dni":"12676578","telefono":"9872471","correo":"sanki2@gmail.com","estado":"A","idTipoCliente":2}
+	r.HandleFunc("/cliente", createCliente).Methods("POST")
+	// update cliente must include idCliente: {"idCliente":4,"nombre":"sannnnnnnnnnnnn","dni":"12676578","telefono":"9872471","correo":"sanki2@gmail.com","estado":"A","idTipoCliente":2}
+	r.HandleFunc("/cliente", updateCliente).Methods("PUT")
+	// delete cliente must include idCliente: {"idCliente":4}
+	r.HandleFunc("/cliente", deleteCliente).Methods("DELETE")
 
 	r.HandleFunc("/", homePage)
 	http.Handle("/", r)
